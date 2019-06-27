@@ -35,9 +35,12 @@ for (i in 1:length(samples)){
   
   #Print the output filesystems and load the modules
   cat("bamDir='./output/'\n")
-  cat("bamInput=$bamDir$samp'-Aligned.sortedByCoord.out.bam'\n\n")
+  cat("bamInput=$bamDir$samp'Aligned.sortedByCoord.out.bam'\n\n")
   
-  cat('module load fastqc/0.11.2\n')
+  cat('module load fastqc/0.11.2\n\n')
+  cat('zcat ', tempR1, ' | fastqc stdin\n')
+  cat('zcat ', tempR2, ' | fastqc stdin\n\n')
+  
   cat('module load aryee/star-2.4.0h\n')
   #make the command for star aligner
   
@@ -65,7 +68,6 @@ for (i in 1:length(samples)){
   
   #Step 2 generate the counts table
   cat('\n\n')
-  cat('source /apps/lab/aryee/pyen/versions/venv-2.7.8/bin/activate\n')
   cat('module load python/2.7.3\n')
   cat('module load htseq/0.6.1\n')
   cat('module load samtools-0.1.18\n\n')
