@@ -1,8 +1,8 @@
-setwd('/Users/benku/Desktop/IFD WBC FastQ/')
+setwd('/PHShome/bw792/MassGeneralWork/FACS_IFD_RNASeq')
 
 files <- list.files(recursive = T)
 files <- files[grep('*.fastq.gz', files)]
-fullPath <- '/Users/benku/Desktop/IFD WBC FastQ/'
+fullPath <- '/PHShome/bw792/MassGeneralWork/FACS_IFD_RNASeq/'
 files <- paste0(fullPath, files)
 
 dir.create('output_star')
@@ -36,10 +36,6 @@ for (i in 1:length(samples)){
   #Print the output filesystems and load the modules
   cat("bamDir='./output/'\n")
   cat("bamInput=$bamDir$samp'Aligned.sortedByCoord.out.bam'\n\n")
-  
-  cat('module load fastqc/0.11.2\n\n')
-  cat('zcat ', tempR1, ' | fastqc stdin\n')
-  cat('zcat ', tempR2, ' | fastqc stdin\n\n')
   
   cat('module load aryee/star-2.4.0h\n')
   #make the command for star aligner
