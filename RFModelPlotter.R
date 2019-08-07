@@ -1,4 +1,32 @@
-RFModelPlotter <- function(RPM.df, metadata, model, modelName){
+RFModelPlotter <- function(RPM.df, metadata, modelInfo, modelName){
+  date <- Sys.Date()
+  
+  #find out how many sample IDs are left for each node
+  #since the first node is a special case, initialize it outside of the loop
+  samples <- vector('list', length = nrow(modelInfo))
+  samples[[1]] <- colnames(RPM.df)
+  names(samples)[1] <- modelInfo$splitvarName[1]
+  
+  for(i in 1:nrow(modelInfo)){
+    #get the gene used to decide positive/negative 
+    gene <- modelInfo$splitvarName[i]
+    if(!is.na(gene)){
+      #get the necessary info to count the number of samples on each side of the split
+      names(samples)[i] <- gene
+      lNode <- modelInfo$leftChild[i]
+      rNode <- modelInfo$rightChild[i]
+      sep <- modelInfo$splitval[i]
+      
+      #Select for the splitting gene, and the samples left in this node
+      tempDF <- RPM.df[gene==rownames(RPM.df),match(samples[[i]],colnames(RPM.df))]
+      samples[[lNode+1]] <- names(tempDF[tempDF<sep])
+      samples[[rNode+1]] <- names(tempDF[tempDF>sep])
+    }
+  }
+  
+  #add the nSamples to the modelInfo for the dendriograph
+  modelInfo$nSamples <- lengths(samples)
+  
   #remove the leafs <- we only want the nodes which lead somewhere to make the dendrograph
   nodes <- modelInfo[!is.na(modelInfo$leftChild),]
   
@@ -14,22 +42,26 @@ RFModelPlotter <- function(RPM.df, metadata, model, modelName){
   #make the graph
   graph <- graph_from_data_frame(model_frame)
   
-  #match predictions to the order that graph gave to the nodes/leaves
+  #match predictions & nSamples to the order that graph gave to the nodes/leaves
   predictions <- as.character(modelInfo$prediction[as.numeric(V(graph)$name)+1])
+  nSamples <- as.character(modelInfo$nSamples[as.numeric(V(graph)$name)+1])
   
-  #feed graph the various information
+  #feed graph the various info
   V(graph)$node_label <- nodes$splitvarName
   V(graph)$leaf_label <- predictions
+  V(graph)$nSamplesRemain <- nSamples 
   V(graph)$split <- as.character(round(nodes$splitval, digits = 3))
   
   #plot the dendrograph
-  pdf(paste0(modelName,'_RFDecisionPlots.pdf'))
+  dimSize <- 7 + 0.1*nrow(modelInfo)
+  pdf(paste0(date, '_', modelName,'_RFDecisionPlots.pdf'), width = dimSize, height = dimSize )
   plot <- ggraph(graph, 'dendrogram') + 
     theme_bw() +
     geom_edge_link() +
     geom_node_point() +
-    geom_node_text(aes(label = node_label), na.rm = TRUE, repel = TRUE) +
-    geom_node_label(aes(label = split), vjust = 2.5, na.rm = TRUE, fill = "white") +
+    geom_node_label(aes(label = node_label), na.rm = TRUE, repel = TRUE) +
+    geom_node_text(aes(label = nSamplesRemain), vjust = -2.5, hjust = 2.5, na.rm = T, repel = T, fill = 'white', show.legend = F)+
+    geom_node_label(aes(label = split), vjust = 2.5, hjust = -1, na.rm = TRUE, repel = T) +
     geom_node_label(aes(label = leaf_label, fill = leaf_label), na.rm = TRUE, 
                     repel = TRUE, colour = "white", fontface = "bold", show.legend = FALSE) +
     theme(panel.grid.minor = element_blank(),
@@ -54,12 +86,16 @@ RFModelPlotter <- function(RPM.df, metadata, model, modelName){
   nodes <- modelInfo$nodeID[!is.na(modelInfo$splitvarName)]
   
   #cut RPM.df down to the important data & append the diagnosis to it
+  #also cut the samples down to only the forking nodes (no leaves)
   RPM.df <- RPM.df[rownames(RPM.df)%in%genes,]
   data <- data.frame(t(RPM.df), diagnosis = metadata$diagnosis)
+  samples <- samples[match(genes, names(samples))]
   
   #plot box plots
   for (i in 1:length(genes)){
-    g <- ggplot(data, aes_string(x='diagnosis', y = genes[i])) + geom_boxplot(outlier.shape = NA)
+    #select only the relevant samples
+    subData <- data[match(samples[[i]],rownames(data)),]
+    g <- ggplot(subData, aes_string(x='diagnosis', y = genes[i])) + geom_boxplot(outlier.shape = NA)
     g <- g + geom_jitter(position = position_jitter(width = 0.2, height = 0)) + geom_hline(yintercept = splitVal[i], color = 'red')
     g <- g + ggtitle(paste('Decision at Node:', nodes[i], '\nSplit Value at', splitVal[i]))
     print(g)

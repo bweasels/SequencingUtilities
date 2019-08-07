@@ -1,4 +1,15 @@
-GSEA_plotter <- function(results, gmt){
+###########################
+#File: GSEA_plotter.R
+#Purpose: Plot out pathway enrichments using the clusterProfiler package in R
+#Inputs: results: The Results dataframe from DESeq2::results(deseqObject, tidy = T) ***Before handing the results, filter out all genes with a p.adj == NA
+#        gmt: .GMT File with the pathway weightings, which can be found at http://software.broadinstitute.org/gsea/msigdb/index.jsp
+#        fdr: False discovery rate - default is 0.1, but can set lower or higher if needed
+#
+#Outputs: None, but does generate plots in the function, so have to capture them outside the function
+#Required Packages: clusterProfiler, ggplot2, DESeq2
+###########################
+
+GSEA_plotter <- function(results, gmt, fdr = 0.1){
   #if there are more than 10 genes go 2 town
   require(org.Hs.eg.db)
   require(clusterProfiler)
@@ -13,7 +24,7 @@ GSEA_plotter <- function(results, gmt){
     names(genes) <- rownames(results)
     
     #make the GSEA object
-    GSEA_output <- GSEA(geneList = genes, TERM2GENE = gmt, pvalueCutoff = 0.1)
+    GSEA_output <- GSEA(geneList = genes, TERM2GENE = gmt, pvalueCutoff = fdr)
     
     #Plot!
     if(nrow(GSEA_output) > 0){

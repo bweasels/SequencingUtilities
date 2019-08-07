@@ -9,8 +9,8 @@
 
 QPCR_plotter <- function(filename, dox){
   
-  data <- read.csv(file= filename)
-  data <- data.frame(Sample = data$Sample.Name, Target = data$Target.Name, CT = data$CÑ.)
+  data <- read.csv(file= filename, stringsAsFactors = F)
+  data <- data.frame(Sample = data$Sample.Name, Target = data$Target.Name, CT = data$C.)
   
   targets <- unique(data$Target)
   samples <- unique(data$Sample)
@@ -100,8 +100,8 @@ QPCR_plotter <- function(filename, dox){
   }else{ #for non Dox situations
     
     ###Change the grep depending on the normalization condition
-    control <- data[grep('Untreated', data$Sample),]
-    data <- data[!grepl('Untreated', data$Sample),]
+    control <- data[grep('Untreat|untreat', data$Sample),]
+    data <- data[!grepl('Untreat|untreat', data$Sample),]
     
     #get the list of targets
     targets <- unique(data$Target)
