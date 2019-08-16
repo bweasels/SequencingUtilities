@@ -1,56 +1,56 @@
-heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE){
-
+heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE, centered = TRUE, scaled = FALSE){
+  require(pheatmap)
+  require(ggplot2)
+  
   #read in files, convert to matrices
-  KMU_data <- read.csv('/MGH/LiverProject/CTC-Seq/input/2019-07-23_KMUCounts_star_genes_erc.counts.csv')
-  KMU_data_matrix <- as.matrix(KMU_data[,-1])
-  rownames(KMU_data_matrix) <-KMU_data[,1]
-  metadata_KMU <- read.csv('/MGH/LiverProject/CTC-Seq/input/2019-07-23_KMUMetadata.csv')
+  KMU_data <- read.csv('/MGH/LiverProject/CTC-Seq/input/2019-08-12_KMUCounts_star_genes_erc.csv', row.names = 1)
+  metadata_KMU <- read.csv('/MGH/LiverProject/CTC-Seq/input/2019-08-12_KMUMetadata.csv', row.names = 1)
   metadata_KMU$Sample.ID <- sub("^", "X", metadata_KMU$Sample.ID )
-  metadata_KMU<-metadata_KMU[order(metadata_KMU$HCC.CLD),]
-  KMU_data_matrix<-KMU_data_matrix[,match(metadata_KMU$Sample.ID,colnames(KMU_data_matrix))]
+  metadata_KMU <- metadata_KMU[order(metadata_KMU$HCC.CLD),]
+  KMU_data <- KMU_data[,match(metadata_KMU$Sample.ID,colnames(KMU_data))]
   
-  MGH_data <- read.csv('/MGH/LiverProject/CTC-Seq/input/HCC CLD RawCounts copy.csv')
-  MGH_data_matrix <- as.matrix(MGH_data[,-1])
-  rownames(MGH_data_matrix) <-MGH_data[,1]
+  MGH_data <- read.csv('/MGH/LiverProject/CTC-Seq/input/HCC CLD RawCounts copy.csv', row.names = 1)
   
-  PBMC_data <- read.csv('/MGH/06-25-19/IFD RNA Seq/PBMCExp_countsTable.csv')
-  PBMC_data_matrix <- as.matrix(PBMC_data[,-1])
-  rownames(PBMC_data_matrix) <-PBMC_data[,1]
+  PBMC_data <- read.csv('/MGH/06-25-19/IFD RNA Seq/PBMCExp_countsTable.csv',row.names = 1)
+  
+  FlowSort_data <- read.csv('/MGH/LiverProject/CTC-Seq/feature/Cross Sample Feature Set/IFD_flowsort_RawCounts_tbl.csv', row.names = 1)
 
   #remove Biopsy, HepG2, HD, HL from mgh data
-  MGH_data_matrix <- MGH_data_matrix[,!grepl('Biopsy|HepG2|HD|HL', colnames(MGH_data_matrix))]
+  MGH_data <- MGH_data[,!grepl('Biopsy|HepG2|HD|HL', colnames(MGH_data))]
 
-  #remove samples with count < 100,000, then remove sum column
-  KMU_sum <-addmargins(KMU_data_matrix)
-  filter_KMU <- KMU_sum[,KMU_sum['Sum',]>100000]
-  filter_KMU <- subset( filter_KMU, select = -Sum )
-  MGH_sum <-addmargins(MGH_data_matrix)
-  filter_MGH <- MGH_sum[,MGH_sum['Sum',]>100000]
-  filter_MGH <- subset( filter_MGH, select = -Sum )
-  PBMC_sum <-addmargins(PBMC_data_matrix)
-  filter_PBMC <- PBMC_sum[,PBMC_sum['Sum',]>100000]
-  filter_PBMC <- subset( filter_PBMC, select = -Sum )
+  #remove samples with count < 100,000
+  KMU_data <- KMU_data[,colSums(KMU_data)>100000]
+  metadata_KMU <- metadata_KMU[match(colnames(KMU_data), metadata_KMU$Sample.ID),]
   
+  MGH_data <- MGH_data[,colSums(MGH_data)>100000]
+  PBMC_data <- PBMC_data[,colSums(PBMC_data)>100000]
+  FlowSort_data <- FlowSort_data[,colSums(FlowSort_data)>100000]
+
   #RPM normalize, log10 scale
-  RPM_KMU <- apply(filter_KMU, 2, function(x)x*1e6/sum(x))
+  RPM_KMU <- apply(KMU_data, 2, function(x) x*1e6/sum(x))
   RPM_KMU <- log10(RPM_KMU+1)
-  RPM_MGH <- apply(filter_MGH, 2, function(x)x*1e6/sum(x))
+  RPM_MGH <- apply(MGH_data, 2, function(x) x*1e6/sum(x))
   RPM_MGH <- log10(RPM_MGH+1)
-  RPM_PBMC <- apply(filter_PBMC, 2, function(x)x*1e6/sum(x))
+  RPM_PBMC <- apply(PBMC_data, 2, function(x) x*1e6/sum(x))
   RPM_PBMC <- log10(RPM_PBMC+1)
+  RPM_FlowSort <- apply(FlowSort_data, 2, function(x) x*1e6/sum(x))
+  RPM_FlowSort <- log10(RPM_FlowSort+1)
   
-  #Use gene panel to subset data, center expression
-  RPM_KMU <- scale(RPM_KMU[match(gene_panel, rownames(RPM_KMU)),], center = T, scale = F)
-  RPM_MGH <- scale(RPM_MGH[match(gene_panel, rownames(RPM_MGH)),], center = T, scale = F)
-  RPM_PBMC <- scale(RPM_PBMC[match(gene_panel, rownames(RPM_PBMC)),], center = T, scale = F)
-
+  #If desired, center expression. Else just use gene panel to subset data
+  RPM_KMU <- t(scale(t(RPM_KMU[match(gene_panel, rownames(RPM_KMU)),]), center = centered, scale = F))
+  RPM_MGH <- t(scale(t(RPM_MGH[match(gene_panel, rownames(RPM_MGH)),]), center = centered, scale = F))
+  RPM_PBMC <- t(scale(t(RPM_PBMC[match(gene_panel, rownames(RPM_PBMC)),]), center = centered, scale = F))
+  RPM_FlowSort <- t(scale(t(RPM_FlowSort[match(gene_panel, rownames(RPM_FlowSort)),]), center = centered, scale = F))
+  
   #make annotations
-  annotation_MGH <- data.frame(row.names=colnames(filter_MGH),
-                           diagnosis=ifelse(grepl("CLD",colnames(filter_MGH)),"CLD","HCC"))
-  annotation_PBMC <- data.frame(row.names=colnames(filter_PBMC),
-                           diagnosis=ifelse(grepl("CLD",colnames(filter_PBMC)),"CLD","HCC"))
+  annotation_MGH <- data.frame(row.names=colnames(RPM_MGH),
+                           diagnosis=ifelse(grepl("CLD",colnames(RPM_MGH)),"CLD","HCC"))
+  annotation_PBMC <- data.frame(row.names=colnames(RPM_PBMC),
+                           diagnosis=ifelse(grepl("CLD",colnames(RPM_PBMC)),"CLD","HCC"))
   annotation_KMU <- data.frame(row.names=metadata_KMU$Sample.ID,
                                diagnosis=ifelse(grepl("CLD",metadata_KMU$HCC.CLD),"CLD","HCC"))
+  annotation_FlowSort <- data.frame(row.names = colnames(RPM_FlowSort), 
+                                    diagnosis = ifelse(grepl('CLD', colnames(RPM_FlowSort)), 'CLD', 'HCC'))
   KMU_HCC_metadata <- metadata_KMU[grepl('HCC',metadata_KMU$HCC.CLD),]
   KMU_CLD_metadata <- metadata_KMU[grepl('CLD',metadata_KMU$HCC.CLD),]
 
@@ -73,6 +73,12 @@ heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE){
            cluster_cols=FALSE,
            cluster_rows = cluster_genes,
            gaps_col = c(length(grep("CLD", annotation_KMU$diagnosis)))-1)
+  pheatmap(RPM_FlowSort, main = 'Flow Sorted Data',
+           annotation_col= annotation_FlowSort,
+           show_colnames = T,
+           cluster_cols = F,
+           cluster_rows = cluster_genes,
+           gaps_col = c(length(grep('CLD', annotation_FlowSort$diagnosis))))
 
   #for each gene, run T Test and compare HCC and CLD
   genes_to_plot <- c()
@@ -89,8 +95,11 @@ heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE){
     MGH_test <- t.test(gene_MGH_HCC, gene_MGH_CLD)
     KMU_test <- t.test(gene_KMU_HCC, gene_KMU_CLD)
     
-    if (MGH_test$p.value<p.threshold && KMU_test$p.value<p.threshold){
-      genes_to_plot <-c(genes_to_plot,rownames(RPM_MGH)[i])
+    #since these are centered, constant expression genes will give a var of 0, producing a nan p.value
+    if(!is.nan(MGH_test$p.value) & !is.nan(KMU_test$p.value)){
+      if (MGH_test$p.value<p.threshold & KMU_test$p.value<p.threshold){
+        genes_to_plot <-c(genes_to_plot,rownames(RPM_MGH)[i])
+      }
     }
   }
   

@@ -15,6 +15,7 @@ GSEA_plotter <- function(results, gmt, fdr = 0.1){
   require(clusterProfiler)
   require(enrichplot)
   
+  output <- NULL
   noGenes = F
   if (nrow(results) > 10){
     
@@ -25,7 +26,9 @@ GSEA_plotter <- function(results, gmt, fdr = 0.1){
     
     #make the GSEA object
     GSEA_output <- GSEA(geneList = genes, TERM2GENE = gmt, pvalueCutoff = fdr)
-    
+    output <- GSEA_output@result
+    output <- cbind(ID = output$ID, Enrichment.Score = output$enrichmentScore, Norm.Enrichment.Score = output$NES, pvalue = output$pvalue, p.adjust = output$p.adjust, qvalues = output$qvalues, max.rank = output$rank)
+        
     #Plot!
     if(nrow(GSEA_output) > 0){
       print(heatplot(GSEA_output, foldChange = genes))
@@ -44,4 +47,5 @@ GSEA_plotter <- function(results, gmt, fdr = 0.1){
     text(x = 0.5, y = 0.5, paste('There were no significant genes for', unique(gsub('^([A-Z]*)_.*', '\\1', gmt$ont)), '.'))
     par(mar = c(5, 4, 4, 2) + 0.1)
   }
+  return(output)
 }
