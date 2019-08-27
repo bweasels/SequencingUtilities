@@ -19,12 +19,11 @@ heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE, ce
   MGH_data <- MGH_data[,!grepl('Biopsy|HepG2|HD|HL', colnames(MGH_data))]
 
   #remove samples with count < 100,000
+  #don't remove low q Flow sorted data because looses too many samples
   KMU_data <- KMU_data[,colSums(KMU_data)>100000]
   metadata_KMU <- metadata_KMU[match(colnames(KMU_data), metadata_KMU$Sample.ID),]
-  
   MGH_data <- MGH_data[,colSums(MGH_data)>100000]
   PBMC_data <- PBMC_data[,colSums(PBMC_data)>100000]
-  FlowSort_data <- FlowSort_data[,colSums(FlowSort_data)>100000]
 
   #RPM normalize, log10 scale
   RPM_KMU <- apply(KMU_data, 2, function(x) x*1e6/sum(x))
@@ -42,6 +41,18 @@ heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE, ce
   RPM_PBMC <- t(scale(t(RPM_PBMC[match(gene_panel, rownames(RPM_PBMC)),]), center = centered, scale = F))
   RPM_FlowSort <- t(scale(t(RPM_FlowSort[match(gene_panel, rownames(RPM_FlowSort)),]), center = centered, scale = F))
   
+  #breakout Flowsorted Data into HCC and CLD samples and similarly average the cell within them
+  RPM_FlowSort_HCC <- RPM_FlowSort[,grep('HCC', colnames(RPM_FlowSort))]
+  RPM_FlowSort_CLD <- RPM_FlowSort[,grep('CLD', colnames(RPM_FlowSort))]
+  cellType <- c('B', 'G', 'M', 'N', 'C', 'H')
+  RPM_FlowSort_Sub <- matrix(nrow = nrow(RPM_FlowSort), ncol = length(cellType), dimnames = list(rownames(RPM_FlowSort), c('B.Cell', 'Granulocytes', 'Monocytes', 'NK.Cells', 'Cytotoxic.T.Cells', 'Helper.T.Cells')))
+  cellType <- c('B', 'G', 'M', 'N', 'C', 'H')
+  for (i in 1:length(cellType)) {
+    HCC_temp <- rowMeans(RPM_FlowSort_HCC[,grep(cellType[i], colnames(RPM_FlowSort_HCC))])
+    CLD_temp <- rowMeans(RPM_FlowSort_CLD[,grep(cellType[i], colnames(RPM_FlowSort_CLD))])
+    RPM_FlowSort_Sub[,i] <- HCC_temp - CLD_temp
+  }
+  
   #make annotations
   annotation_MGH <- data.frame(row.names=colnames(RPM_MGH),
                            diagnosis=ifelse(grepl("CLD",colnames(RPM_MGH)),"CLD","HCC"))
@@ -49,11 +60,15 @@ heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE, ce
                            diagnosis=ifelse(grepl("CLD",colnames(RPM_PBMC)),"CLD","HCC"))
   annotation_KMU <- data.frame(row.names=metadata_KMU$Sample.ID,
                                diagnosis=ifelse(grepl("CLD",metadata_KMU$HCC.CLD),"CLD","HCC"))
-  annotation_FlowSort <- data.frame(row.names = colnames(RPM_FlowSort), 
-                                    diagnosis = ifelse(grepl('CLD', colnames(RPM_FlowSort)), 'CLD', 'HCC'))
   KMU_HCC_metadata <- metadata_KMU[grepl('HCC',metadata_KMU$HCC.CLD),]
   KMU_CLD_metadata <- metadata_KMU[grepl('CLD',metadata_KMU$HCC.CLD),]
 
+  #Make sure that all the data doesn't have NAs
+  RPM_MGH <- RPM_MGH[!is.na(RPM_MGH[,1]),]
+  RPM_PBMC <- RPM_PBMC[!is.na(RPM_PBMC[,1]),]
+  RPM_KMU <- RPM_KMU[!is.na(RPM_KMU[,1]),]
+  RPM_FlowSort_Sub <- RPM_FlowSort_Sub[!is.na(RPM_FlowSort_Sub[,1]),]
+  
   #plot the heatmaps
   pheatmap(RPM_MGH, main = 'MGH Data', 
            annotation_col = annotation_MGH, 
@@ -73,12 +88,10 @@ heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE, ce
            cluster_cols=FALSE,
            cluster_rows = cluster_genes,
            gaps_col = c(length(grep("CLD", annotation_KMU$diagnosis)))-1)
-  pheatmap(RPM_FlowSort, main = 'Flow Sorted Data',
-           annotation_col= annotation_FlowSort,
+  pheatmap(RPM_FlowSort_Sub, main = 'Flow Sorted Data (HCC-CLD)',
            show_colnames = T,
            cluster_cols = F,
-           cluster_rows = cluster_genes,
-           gaps_col = c(length(grep('CLD', annotation_FlowSort$diagnosis))))
+           cluster_rows = cluster_genes)
 
   #for each gene, run T Test and compare HCC and CLD
   genes_to_plot <- c()
@@ -130,4 +143,5 @@ heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE, ce
                           'red'),
                vertical =TRUE, method="jitter", add=TRUE)
   }
+  return(genes_to_plot)
 }
