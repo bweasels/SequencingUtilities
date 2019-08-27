@@ -1,0 +1,39 @@
+ROC_plotter <- function(model, randModels, key, title, confLvl = 0.95){
+
+  require(pROC)
+  require(ggplot2)
+  
+  modelVotes <- model$votes
+  modelVotes <- rowMeans(modelVotes)
+  modelVotes <- data.frame(model = modelVotes, response = key)
+  
+  randVotes <- matrix(nrow = nrow(modelVotes), ncol = length(randModels))
+  for(i in 1:length(randModels)){
+   randVotes[,i] <- rowMeans(randModels[[i]]$votes) 
+  }
+  randVotes <- rowMeans(randVotes)
+  randVotes <- data.frame(rand = randVotes, response = key)
+  
+  rocObj <- plot(roc(response ~ model, modelVotes), 
+                 print.auc = TRUE,
+                 print.auc.y = 0.11,
+                 print.auc.x = 0.3,
+                 col = 'blue', 
+                 xlim = c(1,0), 
+                 ylim = c(0,1),
+                 main = title)
+  
+  ciobj <- ci.se(rocObj, specificities = seq(0, 1, 0.05), conf.level = confLvl)
+  plot(ciobj, type = 'shape', col = '#88BBD6AA')
+  
+  rocObj <- plot(roc(response ~ rand, randVotes),
+                 print.auc = T,
+                 print.auc.y = 0.01,
+                 print.auc.x = 0.3,
+                 col = 'red',
+                 add = T)
+  
+  ciobj <- ci.se(rocObj, specificities = seq(0, 1, 0.05), conf.level = confLvl)
+  plot(ciobj, type = 'shape', col = '#e06967AA')
+}
+
