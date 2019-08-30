@@ -1,4 +1,7 @@
 RFModelPlotter <- function(RPM.df, metadata, modelInfo, modelName){
+  require(igraph)
+  require(ggraph)
+
   date <- Sys.Date()
   
   #find out how many sample IDs are left for each node
@@ -54,16 +57,13 @@ RFModelPlotter <- function(RPM.df, metadata, modelInfo, modelName){
   
   #plot the dendrograph
   dimSize <- 7 + 0.1*nrow(modelInfo)
-  pdf(paste0(date, '_', modelName,'_RFDecisionPlots.pdf'), width = dimSize, height = dimSize )
+  pdf(paste0(date, '_', modelName,'_RFDecisionPlots.pdf'), width = dimSize+1, height = dimSize )
   plot <- ggraph(graph, 'dendrogram') + 
     theme_bw() +
     geom_edge_link() +
     geom_node_point() +
-    geom_node_label(aes(label = node_label), na.rm = TRUE, repel = TRUE) +
-    geom_node_text(aes(label = nSamplesRemain), vjust = -2.5, hjust = 2.5, na.rm = T, repel = T, fill = 'white', show.legend = F)+
-    geom_node_label(aes(label = split), vjust = 2.5, hjust = -1, na.rm = TRUE, repel = T) +
-    geom_node_label(aes(label = leaf_label, fill = leaf_label), na.rm = TRUE, 
-                    repel = TRUE, colour = "white", fontface = "bold", show.legend = FALSE) +
+    geom_node_label(aes(filter = !is.na(node_label), label = paste0('Gene: ', node_label, '\nSplit Val: ', split, '\nSamples: ', nSamplesRemain))) +
+    geom_node_label(aes(filter = is.na(node_label), label = paste0('Decision: ', leaf_label, '\nSamples: ', nSamplesRemain), fill = leaf_label), fontface = 'bold', show.legend = F) +
     theme(panel.grid.minor = element_blank(),
           panel.grid.major = element_blank(),
           panel.background = element_blank(),
@@ -77,7 +77,6 @@ RFModelPlotter <- function(RPM.df, metadata, modelInfo, modelName){
           axis.title.y = element_blank(),
           plot.title = element_text(size = 18)) + 
     ggtitle(paste0('Random Forest Decision Tree: ', modelName, '\nRight branch is less than, left is greater'))
-  
   print(plot)
   
   #get the requsite info for the box plots
