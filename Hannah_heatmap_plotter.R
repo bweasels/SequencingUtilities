@@ -1,3 +1,5 @@
+#thanks to Hannah Thel for writing this very useful plotting function!
+
 heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE, centered = TRUE, scaled = FALSE){
   require(pheatmap)
   require(ggplot2)
