@@ -37,8 +37,17 @@ heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE, ce
   RPM_FlowSort <- apply(FlowSort_data, 2, function(x) x*1e6/sum(x))
   RPM_FlowSort <- log10(RPM_FlowSort+1)
   
+  #make KMU selected for best samples as well
+  liverPanel <- c('FGB', 'FGG', 'ALB', 'AFP', 'FABP1', 'GPC3', 'RBP4', 'RBP4', 'AHSG', 'APOH', 'TF')
+  liverScore <- colSums(RPM_KMU[rownames(RPM_KMU) %in% liverPanel,])
+  
+  #remove all samples with a liver score < 0.5 (less than 3 RPM for the panel)
+  RPM_KMU_Best <- RPM_KMU[,liverScore>0.5]
+  metadata_KMU_best <- metadata_KMU[liverScore>0.5,]
+  
   #If desired, center expression. Else just use gene panel to subset data
   RPM_KMU <- t(scale(t(RPM_KMU[match(gene_panel, rownames(RPM_KMU)),]), center = centered, scale = F))
+  RPM_KMU_Best <- t(scale(t(RPM_KMU_Best[match(gene_panel, rownames(RPM_KMU_Best)),]), center = centered, scale = F))
   RPM_MGH <- t(scale(t(RPM_MGH[match(gene_panel, rownames(RPM_MGH)),]), center = centered, scale = F))
   RPM_PBMC <- t(scale(t(RPM_PBMC[match(gene_panel, rownames(RPM_PBMC)),]), center = centered, scale = F))
   RPM_FlowSort <- t(scale(t(RPM_FlowSort[match(gene_panel, rownames(RPM_FlowSort)),]), center = centered, scale = F))
@@ -52,7 +61,7 @@ heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE, ce
   for (i in 1:length(cellType)) {
     HCC_temp <- rowMeans(RPM_FlowSort_HCC[,grep(cellType[i], colnames(RPM_FlowSort_HCC))])
     CLD_temp <- rowMeans(RPM_FlowSort_CLD[,grep(cellType[i], colnames(RPM_FlowSort_CLD))])
-    RPM_FlowSort_Sub[,i] <- HCC_temp - CLD_temp
+    RPM_FlowSort_Sub[,i] <- (HCC_temp+10)/ (CLD_temp+10)
   }
   
   #make annotations
@@ -62,13 +71,18 @@ heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE, ce
                            diagnosis=ifelse(grepl("CLD",colnames(RPM_PBMC)),"CLD","HCC"))
   annotation_KMU <- data.frame(row.names=metadata_KMU$Sample.ID,
                                diagnosis=ifelse(grepl("CLD",metadata_KMU$HCC.CLD),"CLD","HCC"))
+  annotation_KMU_Best <- data.frame(row.names=metadata_KMU_best$Sample.ID,
+                               diagnosis=ifelse(grepl("CLD",metadata_KMU_best$HCC.CLD),"CLD","HCC"))
   KMU_HCC_metadata <- metadata_KMU[grepl('HCC',metadata_KMU$HCC.CLD),]
   KMU_CLD_metadata <- metadata_KMU[grepl('CLD',metadata_KMU$HCC.CLD),]
+  KMUBest_HCC_metadata <- metadata_KMU_best[grepl('HCC', metadata_KMU_best$HCC.CLD),]
+  KMUBest_CLD_metadata <- metadata_KMU_best[grepl('CLD', metadata_KMU_best$HCC.CLD),]
 
   #Make sure that all the data doesn't have NAs
   RPM_MGH <- RPM_MGH[!is.na(RPM_MGH[,1]),]
   RPM_PBMC <- RPM_PBMC[!is.na(RPM_PBMC[,1]),]
   RPM_KMU <- RPM_KMU[!is.na(RPM_KMU[,1]),]
+  RPM_KMU_Best <- RPM_KMU_Best[!is.na(RPM_KMU_Best[,1]),]
   RPM_FlowSort_Sub <- RPM_FlowSort_Sub[!is.na(RPM_FlowSort_Sub[,1]),]
   
   #plot the heatmaps
@@ -84,13 +98,19 @@ heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE, ce
            cluster_cols=FALSE,
            cluster_rows = cluster_genes,
            gaps_col = c(length(grep("CLD", annotation_PBMC$diagnosis))))
+  pheatmap(RPM_KMU_Best, main = 'KMU Best Samples',
+           annotation_col = annotation_KMU_Best,
+           show_colnames = FALSE,
+           cluster_cols = FALSE,
+           cluster_rows = cluster_genes,
+           gaps_col = c(length(grep('CLD', annotation_KMU_Best))))
   pheatmap(RPM_KMU, main='KMU Data', 
            annotation_col= annotation_KMU, 
            show_colnames=FALSE,
            cluster_cols=FALSE,
            cluster_rows = cluster_genes,
-           gaps_col = c(length(grep("CLD", annotation_KMU$diagnosis)))-1)
-  pheatmap(RPM_FlowSort_Sub, main = 'Flow Sorted Data (HCC-CLD)',
+           gaps_col = c(length(grep("CLD", annotation_KMU$diagnosis))))
+  pheatmap(RPM_FlowSort_Sub, main = 'Flow Sorted Data (HCC/CLD)',
            show_colnames = T,
            cluster_cols = F,
            cluster_rows = cluster_genes)
@@ -125,6 +145,8 @@ heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE, ce
   PBMC_CLD_all <- RPM_PBMC[,grepl("CLD",colnames(RPM_PBMC))]
   KMU_HCC_all <-RPM_KMU[,colnames(RPM_KMU) %in% KMU_HCC_metadata$Sample.ID]
   KMU_CLD_all <-RPM_KMU[,colnames(RPM_KMU) %in% KMU_CLD_metadata$Sample.ID]
+  KMUBest_CLD_all <-RPM_KMU_Best[,colnames(RPM_KMU_Best) %in% KMUBest_CLD_metadata$Sample.ID]
+  KMUBest_HCC_all <-RPM_KMU_Best[,colnames(RPM_KMU_Best) %in% KMUBest_HCC_metadata$Sample.ID]
   
   for (gene in genes_to_plot){
     MGH_HCC<- MGH_HCC_all[gene,]
@@ -133,8 +155,10 @@ heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE, ce
     PBMC_CLD <- PBMC_CLD_all[gene,]
     KMU_HCC <- KMU_HCC_all[gene,]
     KMU_CLD <- KMU_CLD_all[gene,]
+    KMUBest_HCC <- KMUBest_HCC_all[gene,]
+    KMUBest_CLD <- KMUBest_CLD_all[gene,]
     
-    x <- c('MGH_HCC', 'MGH_CLD', 'PBMC_HCC', 'PBMC_CLD', 'KMU_HCC', 'KMU_CLD')
+    x <- c('MGH_HCC', 'MGH_CLD', 'PBMC_HCC', 'PBMC_CLD', 'KMU_HCC', 'KMU_CLD', 'KMUBest_HCC', 'KMUBest_CLD')
     dataList <- lapply(x, get, envir=environment())
     names(dataList) <- x
     
