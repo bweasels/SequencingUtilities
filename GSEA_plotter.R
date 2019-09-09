@@ -22,7 +22,7 @@ GSEA_plotter <- function(results, gmt, fdr = 0.1){
     #make the gene names a decreasing ordered l2fc named vector
     results <- results[order(results$log2FoldChange, decreasing = T),]
     genes <- results$log2FoldChange
-    names(genes) <- rownames(results)
+    names(genes) <- results$row
     
     #make the GSEA object
     GSEA_output <- GSEA(geneList = genes, TERM2GENE = gmt, pvalueCutoff = fdr)
