@@ -1,6 +1,6 @@
 #thanks to Hannah Thel for writing this very useful plotting function!
 
-heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE, centered = TRUE, scaled = FALSE){
+heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE, centered = TRUE, scaled = FALSE, horizontalHeatmaps = FALSE){
   require(pheatmap)
   require(ggplot2)
   
@@ -86,35 +86,65 @@ heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE, ce
   RPM_FlowSort_Sub <- RPM_FlowSort_Sub[!is.na(RPM_FlowSort_Sub[,1]),]
   
   #plot the heatmaps
-  pheatmap(RPM_MGH, main = 'MGH Data', 
-           annotation_col = annotation_MGH, 
-           show_colnames = FALSE,
-           cluster_cols = FALSE,
-           cluster_rows = cluster_genes,
-           gaps_col = c(length(grep("CLD", annotation_MGH$diagnosis))))
-  pheatmap(RPM_PBMC, main='PBMC Data', 
-           annotation_col= annotation_PBMC, 
-           show_colnames=FALSE,
-           cluster_cols=FALSE,
-           cluster_rows = cluster_genes,
-           gaps_col = c(length(grep("CLD", annotation_PBMC$diagnosis))))
-  pheatmap(RPM_KMU_Best, main = 'KMU Best Samples',
-           annotation_col = annotation_KMU_Best,
-           show_colnames = FALSE,
-           cluster_cols = FALSE,
-           cluster_rows = cluster_genes,
-           gaps_col = c(length(grep('CLD', annotation_KMU_Best))))
-  pheatmap(RPM_KMU, main='KMU Data', 
-           annotation_col= annotation_KMU, 
-           show_colnames=FALSE,
-           cluster_cols=FALSE,
-           cluster_rows = cluster_genes,
-           gaps_col = c(length(grep("CLD", annotation_KMU$diagnosis))))
-  pheatmap(RPM_FlowSort_Sub, main = 'Flow Sorted Data (HCC/CLD)',
-           show_colnames = T,
-           cluster_cols = F,
-           cluster_rows = cluster_genes)
-
+  if(horizontalHeatmaps){
+    pheatmap(t(RPM_MGH), main = 'MGH Data', 
+             annotation_row = annotation_MGH, 
+             show_rownames = FALSE,
+             cluster_cols = cluster_genes,
+             cluster_rows = FALSE,
+             gaps_row = c(length(grep("CLD", annotation_MGH$diagnosis))))
+    pheatmap(t(RPM_PBMC), main='PBMC Data', 
+             annotation_row= annotation_PBMC, 
+             show_rownames=FALSE,
+             cluster_rows=FALSE,
+             cluster_cols = cluster_genes,
+             gaps_row = c(length(grep("CLD", annotation_PBMC$diagnosis))))
+    pheatmap(t(RPM_KMU_Best), main = 'KMU Best Samples',
+             annotation_row = annotation_KMU_Best,
+             show_rownames = FALSE,
+             cluster_rows = FALSE,
+             cluster_cols = cluster_genes,
+             gaps_row = c(length(grep('CLD', annotation_KMU_Best))))
+    pheatmap(t(RPM_KMU), main='KMU Data', 
+             annotation_row= annotation_KMU, 
+             show_rownames=FALSE,
+             cluster_rows=FALSE,
+             cluster_cols = cluster_genes,
+             gaps_row = c(length(grep("CLD", annotation_KMU$diagnosis))))
+    pheatmap(t(RPM_FlowSort_Sub), main = 'Flow Sorted Data (HCC + 10/CLD + 10)',
+             show_rownames = T,
+             cluster_rows = F,
+             cluster_cols = cluster_genes)
+  }else{
+    pheatmap(RPM_MGH, main = 'MGH Data', 
+             annotation_col = annotation_MGH, 
+             show_colnames = FALSE,
+             cluster_rows = cluster_genes,
+             cluster_cols = FALSE,
+             gaps_col = c(length(grep("CLD", annotation_MGH$diagnosis))))
+    pheatmap(RPM_PBMC, main='PBMC Data', 
+             annotation_col= annotation_PBMC, 
+             show_rownames=FALSE,
+             cluster_cols=FALSE,
+             cluster_rows = cluster_genes,
+             gaps_col = c(length(grep("CLD", annotation_PBMC$diagnosis))))
+    pheatmap(RPM_KMU_Best, main = 'KMU Best Samples',
+             annotation_col = annotation_KMU_Best,
+             show_colnames = FALSE,
+             cluster_cols = FALSE,
+             cluster_rows = cluster_genes,
+             gaps_col = c(length(grep('CLD', annotation_KMU_Best))))
+    pheatmap(RPM_KMU, main='KMU Data', 
+             annotation_col= annotation_KMU, 
+             show_colnames=FALSE,
+             cluster_cols=FALSE,
+             cluster_rows = cluster_genes,
+             gaps_col = c(length(grep("CLD", annotation_KMU$diagnosis))))
+    pheatmap(RPM_FlowSort_Sub, main = 'Flow Sorted Data (HCC + 10/CLD + 10)',
+             show_colnames = T,
+             cluster_cols = F,
+             cluster_rows = cluster_genes)
+  }
   #for each gene, run T Test and compare HCC and CLD
   genes_to_plot <- c()
   for (i in 1:nrow(RPM_MGH)){
