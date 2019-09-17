@@ -8,9 +8,12 @@
 #Stick everything together into a matrix of SD and Means and primer and stick all together
 
 QPCR_plotter <- function(filename, dox){
+  require(dplyr)
+  require(ggplot2)
+  date <- Sys.Date()
   
-  data <- read.csv(file= filename)
-  data <- data.frame(Sample = data$Sample.Name, Target = data$Target.Name, CT = data$CÑ.)
+  data <- read.csv(file= filename, stringsAsFactors = F)
+  data <- data.frame(Sample = data$Sample.Name, Target = data$Target.Name, CT = data$C.)
   
   targets <- unique(data$Target)
   samples <- unique(data$Sample)
@@ -24,36 +27,31 @@ QPCR_plotter <- function(filename, dox){
     actinAvg[i] <- mean(temp$CT, na.rm = T)
   }
   
-  #subtract the actin average from the other CTs
+  #subtract each sample's actin average from the sample's other data
   data <- data[!(data$Target=='Actin'|data$Target=='ACTIN'),]
   for (i in 1:length(samples)){
     selection <- data$Sample==samples[i]
     data[selection,]$CT <- data[selection,]$CT - actinAvg[i]
   }
   
-  #Break out a matrix of control and conditions
-  #doxSamples <- data[grep('[^no] dox|with Dox', data$Sample),]
-  #noDoxSamples <- data[grep('no Dox|no dox', data$Sample),]
-  
   if(dox){
-    #doxSamples <- data[grep('[^-]DOX', data$Sample),]
-    #noDoxSamples <- data[grep('-DOX', data$Sample),]
+    doxSamples <- data[grep('[^-](DOX|Dox)', data$Sample),]
+    noDoxSamples <- data[grep('-(DOX|Dox)', data$Sample),]
     
-    doxSamples <- data[grep('10', data$Sample),]
-    noDoxSamples <- data[!grepl('10', data$Sample),]
-    
-    #Gather noDox averages
+    #Get unique sample names and targets
     noDoxSamps <- unique(noDoxSamples$Sample)
     doxSamps <- unique(doxSamples$Sample)
     targets <- unique(noDoxSamples$Target)
-    doxAvgs <- matrix(ncol = length(noDoxSamps), nrow = length(targets), dimnames = list(targets, noDoxSamps))
     
-    #Copy the dox averages to the matrix
+    #gather the non dox averages (normalize dox data to its dox values)
+    noDoxAvgs <- matrix(ncol = length(noDoxSamps), nrow = length(targets), dimnames = list(targets, noDoxSamps))
+    
+    #Move the non dox averages into a matrix for ease of use
     for (i in 1:length(targets)){
       temp <- filter(noDoxSamples, Target == targets[i])
       for (j in 1:length(noDoxSamps)){
         temp2 <- filter(temp, Sample == noDoxSamps[j])
-        doxAvgs[i,j] <- mean(temp2$CT, na.rm = T)
+        noDoxAvgs[i,j] <- mean(temp2$CT, na.rm = T)
       }
     }
     
@@ -72,8 +70,8 @@ QPCR_plotter <- function(filename, dox){
     #Subtract the noDox avgs from noDox values
     for (i in 1:length(targets)){
       for (j in 1:length(noDoxSamps)) {
-        noDoxCT <- noDoxSamples[noDoxSamples$Target==targets[i]&noDoxSamples$Sample==noDoxSamps[j],]$CT - doxAvgs[i,j]
-        noDoxCT <- 2^noDoxCT
+        noDoxCT <- noDoxSamples[noDoxSamples$Target==targets[i]&noDoxSamples$Sample==noDoxSamps[j],]$CT - noDoxAvgs[i,j]
+        noDoxCT <- 2^(-noDoxCT)
         averagesNoDox[i,j] <- mean(noDoxCT, na.rm = T)
         SDNoDox[i,j] <- sd(noDoxCT, na.rm = T)
         samplesNoDoxOrder[i,j] <- as.character(noDoxSamps[j])
@@ -83,8 +81,9 @@ QPCR_plotter <- function(filename, dox){
     
     for (i in 1:length(targets)){
       for (j in 1:length(doxSamps)){
-        doxCT <- doxSamples[doxSamples$Target==targets[i]&doxSamples$Sample==doxSamps[j],]$CT - doxAvgs[i,floor(j/2+0.5)] ###TEMP FIX
-        doxCT <- 2^doxCT
+        #doxCT <- doxSamples[doxSamples$Target==targets[i]&doxSamples$Sample==doxSamps[j],]$CT - doxAvgs[i,floor(j/2+0.5)] ###TEMP FIX
+        doxCT <- doxSamples[doxSamples$Target==targets[i]&doxSamples$Sample==doxSamps[j],]$CT - noDoxAvgs[i,j]
+        doxCT <- 2^(-doxCT)
         averagesDox[i,j] <- mean(doxCT, na.rm = T)
         SDDox[i,j] <- sd(doxCT, na.rm = T)
         samplesDoxOrder[i,j] <- as.character(doxSamps[j])
@@ -100,8 +99,8 @@ QPCR_plotter <- function(filename, dox){
   }else{ #for non Dox situations
     
     ###Change the grep depending on the normalization condition
-    control <- data[grep('Untreated', data$Sample),]
-    data <- data[!grepl('Untreated', data$Sample),]
+    control <- data[grep('Untreat|untreat', data$Sample),]
+    data <- data[!grepl('Untreat|untreat', data$Sample),]
     
     #get the list of targets
     targets <- unique(data$Target)
@@ -137,7 +136,7 @@ QPCR_plotter <- function(filename, dox){
         temp_ct <- temp_samp$CT - controlAvgs[i]
         
         #raise everything to the second power
-        temp_ct <- 2^temp_ct
+        temp_ct <- 2^(-temp_ct)
         
         #put the data in their relevant dataobjects
         ctrlAverage[i,j] <- mean(temp_ct, na.rm = T)
@@ -147,7 +146,7 @@ QPCR_plotter <- function(filename, dox){
       }
     }
     
-    #assort the relevant other data data
+    #assort the relevant other data
     for (i in 1:length(targets)){
       temp <- data[data$Target==targets[i],]
       for (j in 1:length(dataSamples)){
@@ -156,7 +155,7 @@ QPCR_plotter <- function(filename, dox){
         temp_ct <- temp_samp$CT - controlAvgs[i]
         
         #raise everything to the second pwoer
-        temp_ct <- 2^temp_ct
+        temp_ct <- 2^(-temp_ct)
         dataAverage[i,j] <- mean(temp_ct, na.rm = T)
         dataSd[i,j] <- sd(temp_samp$CT, na.rm = T)
         dataSamplesOrder[i,j] <- as.character(dataSamples[j])
@@ -181,7 +180,7 @@ QPCR_plotter <- function(filename, dox){
   }
   
   #plot everything out
-  pdf(paste0(gsub('(*.).csv', '\\1', filename), '.pdf'), width = 12)
+  pdf(paste0(date, '_', gsub('(*.).csv', '\\1', filename), '.pdf'), width = 12)
   p <- ggplot(data=output, aes(x=Sample, y=CT, fill = Target), alpha = Sample) 
   p <- p + geom_bar(stat='identity', position ='dodge') 
   p <- p + scale_fill_hue(l=75, c=100) 
