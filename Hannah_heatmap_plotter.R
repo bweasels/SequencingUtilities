@@ -5,17 +5,17 @@ heatmap_plot <- function(gene_panel, p.threshold = 0.1, cluster_genes = TRUE, ce
   require(ggplot2)
   
   #read in files, convert to matrices
-  KMU_data <- read.csv('/MGH/LiverProject/CTC-Seq/input/2019-08-12_KMUCounts_star_genes_erc.csv', row.names = 1)
-  metadata_KMU <- read.csv('/MGH/LiverProject/CTC-Seq/input/2019-08-12_KMUMetadata.csv', row.names = 1)
+  KMU_data <- read.csv('/Dropbox (Partners HealthCare)/CTC-Seq/input/2019-08-12_KMUCounts_star_genes_erc.csv', row.names = 1)
+  metadata_KMU <- read.csv('/Dropbox (Partners HealthCare)/CTC-Seq/input/2019-08-12_KMUMetadata.csv', row.names = 1)
   metadata_KMU$Sample.ID <- sub("^", "X", metadata_KMU$Sample.ID )
   metadata_KMU <- metadata_KMU[order(metadata_KMU$HCC.CLD),]
   KMU_data <- KMU_data[,match(metadata_KMU$Sample.ID,colnames(KMU_data))]
   
-  MGH_data <- read.csv('/MGH/LiverProject/CTC-Seq/input/HCC CLD RawCounts copy.csv', row.names = 1)
+  MGH_data <- read.csv('/Dropbox (Partners HealthCare)/CTC-Seq/input/HCC CLD RawCounts copy.csv', row.names = 1)
   
-  PBMC_data <- read.csv('/MGH/06-25-19/IFD RNA Seq/PBMCExp_countsTable.csv',row.names = 1)
+  PBMC_data <- read.csv('/Dropbox (Partners HealthCare)/Weekly Analyses/06-25-19/IFD RNA Seq/PBMCExp_countsTable.csv',row.names = 1)
   
-  FlowSort_data <- read.csv('/MGH/LiverProject/CTC-Seq/feature/Cross Sample Feature Set/IFD_flowsort_RawCounts_tbl.csv', row.names = 1)
+  FlowSort_data <- read.csv('/Dropbox (Partners HealthCare)/CTC-Seq/feature/Cross Sample Feature Set/IFD_flowsort_RawCounts_tbl.csv', row.names = 1)
 
   #remove Biopsy, HepG2, HD, HL from mgh data
   MGH_data <- MGH_data[,!grepl('Biopsy|HepG2|HD|HL', colnames(MGH_data))]
