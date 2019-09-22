@@ -9,6 +9,16 @@ ROC_plotter <- function(model, key, title, randModels = NA,  confLvl = 0.95){
   modelVotes <- rowMeans(modelVotes)
   modelVotes <- data.frame(model = modelVotes, response = key)
   
+  #Gather the random votes
+  if(!is.na(randModels)){
+    randVotes <- matrix(nrow = nrow(modelVotes), ncol = length(randModels))
+    for(i in 1:length(randModels)){
+      randVotes[,i] <- rowMeans(randModels[[i]]$votes) 
+    }
+    randVotes <- rowMeans(randVotes)
+    randVotes <- data.frame(rand = randVotes, response = key)
+  }
+  
   #Plot the model
   rocObj <- plot(roc(response ~ model, modelVotes), 
                  print.auc = TRUE,
@@ -26,12 +36,6 @@ ROC_plotter <- function(model, key, title, randModels = NA,  confLvl = 0.95){
   
   #pull the random votes from each model in the list of randoms if it exists
   if(!is.na(randModels)){
-    randVotes <- matrix(nrow = nrow(modelVotes), ncol = length(randModels))
-    for(i in 1:length(randModels)){
-      randVotes[,i] <- rowMeans(randModels[[i]]$votes) 
-    }
-    randVotes <- rowMeans(randVotes)
-    randVotes <- data.frame(rand = randVotes, response = key)
     
     #Plot the random
     rocObj <- plot(roc(response ~ rand, randVotes),
