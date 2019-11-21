@@ -1,13 +1,14 @@
-setwd('/PHShome/bw792/MassGeneralWork/FACS_IFD_RNASeq')
+setwd('/data/rama/labMembers/bw792/mechanomutationFastqs/pool19/')
 
+#Get the files and make the output folders
 files <- list.files(recursive = T)
 files <- files[grep('*.fastq.gz', files)]
-fullPath <- '/PHShome/bw792/MassGeneralWork/FACS_IFD_RNASeq/'
-files <- paste0(fullPath, files)
-
+fullPath <- '/data/rama/labMembers/bw792/mechanomutationFastqs/pool19/'
 dir.create('output_star')
+dir.create('output')
 
-samples <- unique(gsub('.*NS112-(.*)_S.*', '\\1', files))
+#get the sample ids
+samples <- unique(gsub('input/R(1|2)/(MK.*)_L00(1|2|3|4).*', '\\2', files))
 
 for (i in 1:length(samples)){
   #make the individual output folder for each run
