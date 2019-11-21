@@ -76,7 +76,7 @@ RFModelPlotter <- function(RPM.df, metadata, modelInfo, modelName){
           axis.title.x = element_blank(),
           axis.title.y = element_blank(),
           plot.title = element_text(size = 18)) + 
-    ggtitle(paste0('Random Forest Decision Tree: ', modelName, '\nRight branch is less than, left is greater'))
+    ggtitle(paste0('Random Forest Decision Tree: ', modelName))
   print(plot)
   
   #get the requsite info for the box plots
