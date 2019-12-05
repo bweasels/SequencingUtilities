@@ -86,3 +86,9 @@ loadAndIntegrateSamples <- function(sample.dirs, samples){
   saveRDS(object = data.integrated, 'data.integrated.RDS')
   return(data.integrated)
 }
+
+sampleComposition <- function(dataset){
+  plot <- ggplot(dataset@meta.data, aes(x=orig.ident, fill = orig.ident))
+  plot <- plot + geom_bar()+NoLegend()+theme(axis.text.x=element_text(angle=90, hjust=1))
+  return(plot)
+}
