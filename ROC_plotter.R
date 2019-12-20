@@ -11,7 +11,7 @@ ROC_plotter <- function(model, key, title, randModels = NA,  confLvl = 0.95){
   
   #Gather the random votes
   if(all(!is.na(randModels))){
-    #randVotes <- matrix(nrow = 121, ncol = length(randModels))
+    #randVotes <- matrix(nrow = 85, ncol = length(randModels))
     randVotes <- matrix(nrow = nrow(modelVotes), ncol = length(randModels))
     for(i in 1:length(randModels)){
       randVotes[,i] <- rowMeans(randModels[[i]]$votes) 
