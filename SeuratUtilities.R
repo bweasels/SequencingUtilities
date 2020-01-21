@@ -53,6 +53,7 @@ loadAndIntegrateSamples <- function(sample.dirs, samples){
   require(ggplot2)
   require(dplyr)
   require(cowplot)
+  date <- Sys.Date()
   
   #make a holder
   data.list <- vector('list', length = length(samples))
