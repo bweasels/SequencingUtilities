@@ -72,7 +72,10 @@ loadAndIntegrateSamples <- function(sample.dirs, samples){
     plot(plotQCBasics(data, samples[i]))
     
     #Samples with n UMI < 750 are platelets and RBCs and >2500 is possibly doublets, so filter all these out
-    data <- SCTransform(data, vars.to.regress = 'percent.mt', verbose = F)
+    #data <- SCTransform(data, vars.to.regress = 'percent.mt', verbose = F)
+    
+    #For the sake of the repeats, we wont regress to a variable
+    data <- SCTransform(data, verbose = F)
     data.list[[i]] <- data
   }
   dev.off()
