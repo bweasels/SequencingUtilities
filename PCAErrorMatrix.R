@@ -19,7 +19,7 @@ PCAErrorMatrix <- function(rawData, PCs, selectedPCs='All'){
   geneMeans <- rowMeans(rawData)
   
   #Iterate through each PC and find the error
-  for(j in 1:5){
+  for(j in 1:ncol(PCs)){
     for(i in 1:ncol(rawData)){
       #Get the raw data to calculate the true euclidian distance from the origin
       #formula is sqrt((Val1-Mean1)^2+(Val2-Mean2)^2...(ValN-MeanN)^2)
@@ -31,7 +31,7 @@ PCAErrorMatrix <- function(rawData, PCs, selectedPCs='All'){
       pcDist <- sqrt(sum((pcDist-geneMeans)^2))
       
       #Error is the difference between the optimized distance and PC Distance
-      errorDF[i,j] <- (pcDist-rawDist)^2
+      errorDF[i,j] <- (rawDist-pcDist)^2
     }
   }
   return(errorDF)
