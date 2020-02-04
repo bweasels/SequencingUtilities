@@ -27,11 +27,16 @@ PCAErrorMatrix <- function(rawData, PCs, selectedPCs='All'){
       rawDist <- sqrt(sum((tempData-geneMeans)^2))
       
       #Multiply the Gene expression by the PC Rotation to get the transformed value
-      pcDist <- tempData*PCs[,j]
-      pcDist <- sqrt(sum((pcDist-geneMeans)^2))
+      #pcDist <- tempData*PCs[,j]
+      
+      #center the gene expression data, then multiply by PC rotation to get transformed value
+      normDist <- tempData-geneMeans
+      pcDist <- sqrt(sum((normDist*PCs[,j])^2))
       
       #Error is the difference between the optimized distance and PC Distance
-      errorDF[i,j] <- (rawDist-pcDist)^2
+      #errorDF[i,j] <- (rawDist-pcDist)^2
+      #Output unsquared error to see if they are all positive (should be)
+      errorDF[i,j] <- rawDist-pcDist
     }
   }
   return(errorDF)
