@@ -10,7 +10,7 @@ plotQCBasics <- function(data, label){
   combo <- plot_grid(plot1, plot2, plot3, plot4, ncol = 2, align='h')
   title <- ggdraw() + draw_label(label)
   
-  plot(plot_grid(title, combo, ncol=1, rel_heights=c(0.05,1)))
+  return(plot_grid(title, combo, ncol=1, rel_heights=c(0.05,1)))
 }
 
 advnUMIPlots <- function(counts, metadata, title){
