@@ -7,14 +7,29 @@
 #2^ the table values
 #Stick everything together into a matrix of SD and Means and primer and stick all together
 
-QPCR_plotter <- function(filename, dox){
+QPCR_plotter <- function(file, sampleName, dox, controlID=NULL, finalOrder=NULL, outputRawDDCT=F){
   require(dplyr)
   require(ggplot2)
   date <- Sys.Date()
   
-  data <- read.csv(file= filename, stringsAsFactors = F)
-  data <- data.frame(Sample = data$Sample.Name, Target = data$Target.Name, CT = data$C.)
+  #Need controlID for non dox condition
+  if(!dox & is.null(controlID)){
+    stop('Please enter a control ID for non-dox controlled plates')
+  }
+  if(!all(finalOrder%in%file$Sample.Name)){
+    stop("Final order sample names don't match with input data")
+  }
+  if(!is.null(controlID)){
+    if(!any(grepl(controlID, file$Sample.Name))){
+      stop('Control ID not found in the input data')
+    }
+  }
   
+  #Trim the data to a nice size and get the targets and samples
+  data <- data.frame(Sample = file$Sample.Name, 
+                     Target = file$Target.Name, 
+                     CT = file$C., 
+                     stringsAsFactors = F)
   targets <- unique(data$Target)
   samples <- unique(data$Sample)
   
@@ -99,8 +114,8 @@ QPCR_plotter <- function(filename, dox){
   }else{ #for non Dox situations
     
     ###Change the grep depending on the normalization condition
-    control <- data[grep('Untreat|untreat', data$Sample),]
-    data <- data[!grepl('Untreat|untreat', data$Sample),]
+    control <- data[grep(controlID, data$Sample),]
+    data <- data[!grepl(controlID, data$Sample),]
     
     #get the list of targets
     targets <- unique(data$Target)
@@ -127,16 +142,22 @@ QPCR_plotter <- function(filename, dox){
     dataSamplesOrder <- matrix(nrow = length(targets), ncol = length(dataSamples), dimnames = list(targets, dataSamples))
     dataTargetsOrder <- matrix(nrow = length(targets), ncol = length(dataSamples), dimnames = list(targets, dataSamples))
     
+    #export raw ddCT for Xin
+    ddCT <- data.frame(Sample=NULL, Target=NULL, CT=NULL)
+    
     #assort the relevant control data
     for (i in 1:length(targets)){
       temp <- control[control$Target==targets[i],]
+
       for (j in 1:length(controlSamples)){
         #get the relevant CT values and subtract the control values from it
         temp_samp <- temp[temp$Sample==controlSamples[j],]
         temp_ct <- temp_samp$CT - controlAvgs[i]
         
-        #raise everything to the second power
+        #raise everything to the second power & save the raw ddCT for Xin
         temp_ct <- 2^(-temp_ct)
+        temp_samp$CT <- temp_ct
+        ddCT <- rbind(ddCT, temp_samp)
         
         #put the data in their relevant dataobjects
         ctrlAverage[i,j] <- mean(temp_ct, na.rm = T)
@@ -149,13 +170,17 @@ QPCR_plotter <- function(filename, dox){
     #assort the relevant other data
     for (i in 1:length(targets)){
       temp <- data[data$Target==targets[i],]
+
       for (j in 1:length(dataSamples)){
         #get the relevant CT values and subtract the control values from it
         temp_samp <- temp[temp$Sample==dataSamples[j],]
         temp_ct <- temp_samp$CT - controlAvgs[i]
         
-        #raise everything to the second pwoer
+        #raise everything to the second pwoer & save the raw ddCT for Xin
         temp_ct <- 2^(-temp_ct)
+        temp_samp$CT <- temp_ct
+        ddCT <- rbind(ddCT, temp_samp)
+        
         dataAverage[i,j] <- mean(temp_ct, na.rm = T)
         dataSd[i,j] <- sd(temp_samp$CT, na.rm = T)
         dataSamplesOrder[i,j] <- as.character(dataSamples[j])
@@ -163,28 +188,40 @@ QPCR_plotter <- function(filename, dox){
       }
     }
     
+    if(outputRawDDCT){
+      write.csv(ddCT, paste0(date,'_',sampleName, '_RAW_DDCT.csv'), row.names = F)
+    }
+    
     #Flatten everything down and stick it into a dataframe
     outputCtrl <- data.frame(Sample = as.character(as.vector(ctrlSamplesOrder)), 
                              Target = as.character(as.vector(ctrlTargetsOrder)), 
                              CT = as.vector(ctrlAverage), 
-                             SD = as.vector(ctrlSd))
+                             SD = as.vector(ctrlSd), 
+                             stringsAsFactors = T)
     outputData <- data.frame(Sample = as.character(as.vector(dataSamplesOrder)), 
                              Target = as.character(as.vector(dataTargetsOrder)), 
                              CT = as.vector(dataAverage), 
-                             SD = as.vector(dataSd))
+                             SD = as.vector(dataSd),
+                             stringsAsFactors = T)
     
     
     #flatten them all into the dataframe for the output
     output <- rbind(outputCtrl, outputData)
-    output$Sample <- factor(output$Sample, levels = unique(output$Sample[order(as.character(output$Sample))]))
+    
+    if(is.null(finalOrder)){
+      output$Sample <- factor(output$Sample, levels = unique(output$Sample[order(as.character(output$Sample))]))
+    }
+    else{
+      output$Sample <- factor(output$Sample, levels = finalOrder)
+    }
   }
   
   #plot everything out
-  pdf(paste0(date, '_', gsub('(*.).csv', '\\1', filename), '.pdf'), width = 12)
+  pdf(paste0(date, '_', sampleName, '.pdf'), width = 12)
   p <- ggplot(data=output, aes(x=Sample, y=CT, fill = Target), alpha = Sample) 
   p <- p + geom_bar(stat='identity', position ='dodge') 
   p <- p + scale_fill_hue(l=75, c=100) 
-  p <- p + ggtitle(gsub('(*.).csv', '\\1', filename)) 
+  p <- p + ggtitle(gsub('(*.).csv', '\\1', sampleName)) 
   p <- p + geom_errorbar(aes(ymin=CT-SD, ymax=CT+SD), width=0.2, position = position_dodge(.9)) 
   p <- p + guides(fill=guide_legend(title="Target"))
   print(p)
