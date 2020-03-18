@@ -143,7 +143,7 @@ QPCR_plotter <- function(file, sampleName, dox, controlID=NULL, finalOrder=NULL,
     dataTargetsOrder <- matrix(nrow = length(targets), ncol = length(dataSamples), dimnames = list(targets, dataSamples))
     
     #export raw ddCT for Xin
-    ddCT <- data.frame(Sample=NULL, Target=NULL, CT=NULL)
+    ddCT_ctrl <- data.frame(Sample=NULL, Target=NULL, CT=NULL)
     
     #assort the relevant control data
     for (i in 1:length(targets)){
@@ -157,7 +157,7 @@ QPCR_plotter <- function(file, sampleName, dox, controlID=NULL, finalOrder=NULL,
         #raise everything to the second power & save the raw ddCT for Xin
         temp_ct <- 2^(-temp_ct)
         temp_samp$CT <- temp_ct
-        ddCT <- rbind(ddCT, temp_samp)
+        ddCT_ctrl <- rbind(ddCT_ctrl, temp_samp)
         
         #put the data in their relevant dataobjects
         ctrlAverage[i,j] <- mean(temp_ct, na.rm = T)
@@ -167,6 +167,7 @@ QPCR_plotter <- function(file, sampleName, dox, controlID=NULL, finalOrder=NULL,
       }
     }
     
+    ddCT_data <- data.frame(Sample=NULL, Target=NULL, CT=NULL)
     #assort the relevant other data
     for (i in 1:length(targets)){
       temp <- data[data$Target==targets[i],]
@@ -179,7 +180,7 @@ QPCR_plotter <- function(file, sampleName, dox, controlID=NULL, finalOrder=NULL,
         #raise everything to the second pwoer & save the raw ddCT for Xin
         temp_ct <- 2^(-temp_ct)
         temp_samp$CT <- temp_ct
-        ddCT <- rbind(ddCT, temp_samp)
+        ddCT_data <- rbind(ddCT_data, temp_samp)
         
         dataAverage[i,j] <- mean(temp_ct, na.rm = T)
         dataSd[i,j] <- sd(temp_samp$CT, na.rm = T)
@@ -187,6 +188,9 @@ QPCR_plotter <- function(file, sampleName, dox, controlID=NULL, finalOrder=NULL,
         dataTargetsOrder[i,j] <- as.character(targets[i])
       }
     }
+    
+    ddCT <- rbind(ddCT_ctrl, ddCT_data)
+    #ddCT$CT <- ddCT$CT/ddCT_ctrl$CT
     
     if(outputRawDDCT){
       write.csv(ddCT, paste0(date,'_',sampleName, '_RAW_DDCT.csv'), row.names = F)
@@ -207,6 +211,7 @@ QPCR_plotter <- function(file, sampleName, dox, controlID=NULL, finalOrder=NULL,
     
     #flatten them all into the dataframe for the output
     output <- rbind(outputCtrl, outputData)
+    output$CT <- output$CT/outputCtrl$CT
     
     if(is.null(finalOrder)){
       output$Sample <- factor(output$Sample, levels = unique(output$Sample[order(as.character(output$Sample))]))

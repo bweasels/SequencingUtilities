@@ -78,17 +78,18 @@ loadAndIntegrateSamples <- function(sample.dirs, samples){
     #data <- SCTransform(data, verbose = F)
     data.list[[i]] <- data
     print(paste('Completed Loading Sample:', names(data.list)[i]))
+    rm(data)
   }
   dev.off()
   #select features for downstream integration and calculae all the necessary pearson residuals
   options(future.globals.maxSize=4000*1024^2)
-  data.features <- SelectIntegrationFeatures(object.list = data.list, nfeatures = 10000)
+  data.features <- SelectIntegrationFeatures(object.list = data.list, nfeatures = 2000)
   data.list <- PrepSCTIntegration(object.list = data.list, anchor.features = data.features, verbose = F)
   
   #Identify anchors and integrate the datasets
   data.list <- FindIntegrationAnchors(object.list = data.list, normalization.method = 'SCT', anchor.features = data.features, verbose = T)
   data.integrated <- IntegrateData(anchorset = data.list, normalization.method = 'SCT', verbose = T)
-  saveRDS(object = data.integrated, 'data.integrated.RDS')
+  #saveRDS(object = data.integrated, 'data.integrated.RDS')
   return(data.integrated)
 }
 
