@@ -143,7 +143,7 @@ QPCR_plotter <- function(file, sampleName, dox, controlID=NULL, finalOrder=NULL,
     dataTargetsOrder <- matrix(nrow = length(targets), ncol = length(dataSamples), dimnames = list(targets, dataSamples))
     
     #export raw ddCT for Xin
-    ddCT_ctrl <- data.frame(Sample=NULL, Target=NULL, CT=NULL)
+    ddCT_ctrl <- data.frame(Sample=NULL, Target=NULL, CT=NULL, SD=NULL)
     
     #assort the relevant control data
     for (i in 1:length(targets)){
@@ -156,7 +156,9 @@ QPCR_plotter <- function(file, sampleName, dox, controlID=NULL, finalOrder=NULL,
         
         #raise everything to the second power & save the raw ddCT for Xin
         temp_ct <- 2^(-temp_ct)
+        temp_ct <- temp_ct/mean(temp_ct)
         temp_samp$CT <- temp_ct
+        temp_samp$SD <- sd(temp_ct, na.rm = T)
         ddCT_ctrl <- rbind(ddCT_ctrl, temp_samp)
         
         #put the data in their relevant dataobjects
@@ -167,7 +169,7 @@ QPCR_plotter <- function(file, sampleName, dox, controlID=NULL, finalOrder=NULL,
       }
     }
     
-    ddCT_data <- data.frame(Sample=NULL, Target=NULL, CT=NULL)
+    ddCT_data <- data.frame(Sample=NULL, Target=NULL, CT=NULL, SD=NULL)
     #assort the relevant other data
     for (i in 1:length(targets)){
       temp <- data[data$Target==targets[i],]
@@ -180,17 +182,21 @@ QPCR_plotter <- function(file, sampleName, dox, controlID=NULL, finalOrder=NULL,
         #raise everything to the second pwoer & save the raw ddCT for Xin
         temp_ct <- 2^(-temp_ct)
         temp_samp$CT <- temp_ct
+        
+        #divide the dct by the control and calculate the SD mean to make it delta delta CT
+        temp_samp$CT <- temp_samp$CT/mean(ddCT_ctrl$CT[ddCT_ctrl$Target==targets[i]])
+        temp_samp$SD <- sd(temp_samp$CT, na.rm=T)
         ddCT_data <- rbind(ddCT_data, temp_samp)
         
-        dataAverage[i,j] <- mean(temp_ct, na.rm = T)
+        dataAverage[i,j] <- mean(temp_samp$CT, na.rm = T)
         dataSd[i,j] <- sd(temp_samp$CT, na.rm = T)
         dataSamplesOrder[i,j] <- as.character(dataSamples[j])
         dataTargetsOrder[i,j] <- as.character(targets[i])
       }
     }
     
+    #create the ddCT table, stick everything together and save it if needed
     ddCT <- rbind(ddCT_ctrl, ddCT_data)
-    #ddCT$CT <- ddCT$CT/ddCT_ctrl$CT
     
     if(outputRawDDCT){
       write.csv(ddCT, paste0(date,'_',sampleName, '_RAW_DDCT.csv'), row.names = F)
