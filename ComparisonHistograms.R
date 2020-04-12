@@ -1,4 +1,4 @@
-ComparisonHistogram <- function(dataset1, dataset2, labels, nBins = 50, title = 'Comparison Histogram'){
+ComparisonHistogram <- function(dataset1, dataset2, labels, nBins = 50, title = 'Comparison Histogram', xTitle = NULL){
   require(ggplot2)
   data <- data.frame(dat = c(dataset1, dataset2), 
                      lab = c(rep(labels[1], length(dataset1)),
@@ -7,11 +7,14 @@ ComparisonHistogram <- function(dataset1, dataset2, labels, nBins = 50, title = 
   g <- g + geom_histogram(data=subset(data,lab == labels[1]), 
                           fill = 'red', 
                           alpha = 0.3,
-                          bins = 50)
+                          bins = nBins)
   g <- g + geom_histogram(data=subset(data,lab == labels[2]), 
                           fill = 'blue', 
                           alpha = 0.3,
-                          bins = 50)
+                          bins = nBins)
   g <- g + ggtitle(paste(title, '\n Red:', labels[1], '| Blue:', labels[2]))
+  if(!is.null(xTitle)){
+    g <- g + labs(x = xTitle)
+  }
   plot(g)
 }
