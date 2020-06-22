@@ -2,7 +2,7 @@
 ##Cmd: mkala001.R --vanilla
 ##Purpose: Fix September/March/December genes
 ##Output: The RNA seq table with dates fixed
-##Notes: ugh
+##Notes: ugh this is such a stupid excersize - fix yo shit Excel
 ##############################################################
 
 fixMarchGenes <- function(reads_table){
